@@ -18,7 +18,7 @@ import wave
 # Config
 # ------------------------
 # Expect GOOGLE_API_KEY in env
-GOOGLE_API_KEY = "AIzaSyCTTCnoBPJBrKLxOmxcMQZIznVor3r3QdM"
+GOOGLE_API_KEY = "<>"
 if not GOOGLE_API_KEY:
     print("WARNING: GOOGLE_API_KEY not set. Set it before running or Gemini calls will fail.")
 
