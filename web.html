@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visual QA — Dark Mode</title>
+<style>
+  :root {
+    --primary-color: #1f8ef1;
+    --bg-color: #121212;
+    --card-bg: #1e1e2f;
+    --text-color: #e0e0e0;
+    --secondary-color: #bbbbbb;
+    --gap: 30px;
+    --radius: 16px;
+  }
+
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg-color);
+    color: var(--text-color);
+  }
+
+  header {
+    background: #0f0f17;
+    padding: 32px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    font-size: 1.6rem;
+    font-weight: bold;
+    letter-spacing: 1px;
+    color: var(--primary-color);
+  }
+
+  .container {
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--gap);
+  }
+
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: var(--radius);
+    padding: 32px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.7);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 14px 40px rgba(0,0,0,0.8);
+  }
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: 24px;
+    color: var(--primary-color);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    padding-bottom: 8px;
+    font-weight: 600;
+  }
+
+  label {
+    display: block;
+    margin-bottom: 10px;
+    color: var(--secondary-color);
+    font-weight: 500;
+  }
+
+  input[type="file"], textarea {
+    width: 100%;
+    border-radius: var(--radius);
+    border: none;
+    padding: 16px;
+    font-size: 1rem;
+    outline: none;
+    margin-bottom: 20px;
+    background: #2a2a3c;
+    color: var(--text-color);
+  }
+
+  textarea { min-height: 120px; resize: vertical; }
+
+  button {
+    background: var(--primary-color);
+    border: none;
+    color: #fff;
+    padding: 14px 22px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+  }
+
+  button:hover {
+    background: #1066c9;
+  }
+
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 24px;
+  }
+
+  .det {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: var(--radius);
+    background: #2b2b3d;
+    font-size: 0.9rem;
+    margin: 6px 8px 0 0;
+    color: var(--primary-color);
+    font-weight: 500;
+  }
+
+  img.preview {
+    max-width: 100%;
+    border-radius: var(--radius);
+    display: block;
+    margin-top: 24px;
+    border: 2px solid #333;
+  }
+
+  .answer {
+    background: #2b2b3d;
+    border-radius: var(--radius);
+    padding: 20px;
+    min-height: 80px;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--text-color);
+    margin-top: 16px;
+  }
+
+</style>
+</head>
+<body>
+
+<header>VisionIQ</header>
+
+<div class="container">
+  <div class="grid">
+
+    <!-- Left Card: Image + Detections -->
+    <div class="card">
+      <h3>1) Upload Image & Detect</h3>
+      <label for="imgInput">Select image</label>
+      <input id="imgInput" type="file" accept="image/*"/>
+      <div class="row">
+        <button id="btnDetect">Run Detection</button>
+      </div>
+
+      <h3>Detections</h3>
+      <div id="detList">—</div>
+
+      <h3>Annotated Image</h3>
+      <img id="annotated" class="preview" alt="Annotated result"/>
+    </div>
+
+    <!-- Right Card: Question + Answer -->
+    <div class="card">
+      <h3>2) Ask a Question</h3>
+      <label for="question">Your question</label>
+      <textarea id="question" placeholder="e.g. How many people? What is the person holding?"></textarea>
+      <div class="row">
+        <button id="btnAsk">Ask </button>
+      </div>
+
+      <h3>Answer</h3>
+      <div id="answer" class="answer">—</div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const imgInput = document.getElementById("imgInput");
+const btnDetect = document.getElementById("btnDetect");
+const detList = document.getElementById("detList");
+const annotated = document.getElementById("annotated");
+
+const questionEl = document.getElementById("question");
+const btnAsk = document.getElementById("btnAsk");
+const answerEl = document.getElementById("answer");
+
+let lastFile = null;
+let lastAnswer = "";
+
+imgInput.addEventListener("change", () => {
+  lastFile = imgInput.files[0] || null;
+  detList.textContent = "—";
+  annotated.removeAttribute("src");
+  answerEl.textContent = "—";
+  lastAnswer = "";
+});
+
+btnDetect.addEventListener("click", async () => {
+  if (!lastFile) { alert("Please choose an image first."); return; }
+  btnDetect.disabled = true; btnDetect.textContent = "Detecting…";
+
+  const fd = new FormData();
+  fd.append("image", lastFile);
+  const q = questionEl.value.trim();
+  if (q) fd.append("question", q);
+
+  try {
+    const res = await fetch("/detect", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    detList.textContent = "";
+    if (data.detections && data.detections.length) {
+      data.detections.forEach(d => {
+        const span = document.createElement("span");
+        span.className = "det";
+        span.textContent = `${d.label} (${d.confidence.toFixed(2)})`;
+        detList.appendChild(span);
+      });
+    } else { detList.textContent = "No objects detected."; }
+
+    if (data.annotated_image_b64) {
+      annotated.src = `data:image/jpeg;base64,${data.annotated_image_b64}`;
+    }
+
+    lastAnswer = data.answer || "";
+    answerEl.textContent = lastAnswer || "—";
+
+  } catch (err) { alert("Detect failed: " + err.message); }
+  finally { btnDetect.disabled = false; btnDetect.textContent = "Run Detection"; }
+});
+
+btnAsk.addEventListener("click", async () => {
+  if (!lastFile) { alert("Upload an image first."); return; }
+  const q = questionEl.value.trim();
+  if (!q) { alert("Type a question first."); return; }
+
+  btnAsk.disabled = true; btnAsk.textContent = "Asking…";
+  const fd = new FormData();
+  fd.append("image", lastFile);
+  fd.append("question", q);
+
+  try {
+    const res = await fetch("/detect", { method: "POST", body: fd });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+
+    detList.textContent = "";
+    if (data.detections && data.detections.length) {
+      data.detections.forEach(d => {
+        const span = document.createElement("span");
+        span.className = "det";
+        span.textContent = `${d.label} (${d.confidence.toFixed(2)})`;
+        detList.appendChild(span);
+      });
+    } else { detList.textContent = "No objects detected."; }
+
+    if (data.annotated_image_b64) {
+      annotated.src = `data:image/jpeg;base64,${data.annotated_image_b64}`;
+    }
+
+    lastAnswer = data.answer || "";
+    answerEl.textContent = lastAnswer || "—";
+
+  } catch (err) { alert("Ask failed: " + err.message); }
+  finally { btnAsk.disabled = false; btnAsk.textContent = "Ask "; }
+});
+</script>
+</body>
+</html>
